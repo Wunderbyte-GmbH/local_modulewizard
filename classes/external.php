@@ -37,6 +37,7 @@ class local_modulewizard_external extends external_api {
      * @param string $targetcourseidnumber
      * @param null|string $targetsectionname
      * @param null|int $targetslot
+     * @param null|string $postfix
      * @return int[]
      * @throws coding_exception
      * @throws invalid_parameter_exception
@@ -48,14 +49,16 @@ class local_modulewizard_external extends external_api {
             string $sourcemodulename,
             string $targetcourseidnumber,
             $targetsectionname = null,
-            $targetslot = null) {
+            $targetslot = null,
+            $postfix = null) {
 
         $params = array(
                 'sourcecmid' => $sourcecmid,
                 'sourcemodulename' => $sourcemodulename,
                 'targetcourseidnumber' => $targetcourseidnumber,
                 'targetsectionname' => $targetsectionname,
-                'targetslot' => $targetslot
+                'targetslot' => $targetslot,
+                'postfix' => $postfix
         );
 
         $params = self::validate_parameters(self::copy_module_parameters(), $params);
@@ -69,7 +72,7 @@ class local_modulewizard_external extends external_api {
         self::validate_context($context);
 
         // We try to copy the module to the target.
-        if (local_modulewizard\modulewizard::copy_module($cm, $targetcourseidnumber, $targetsectionname, $targetslot)) {
+        if (local_modulewizard\modulewizard::copy_module($cm, $targetcourseidnumber, $targetsectionname, $targetslot, $postfix)) {
             $success = 1;
         } else {
             $success = 0;
@@ -87,8 +90,9 @@ class local_modulewizard_external extends external_api {
                 'sourcecmid' => new external_value(PARAM_INT, 'The cmid of the module to copy.'),
                 'sourcemodulename' => new external_value(PARAM_RAW, 'The module type of the module to copy (eg. quiz or mooduell)'),
                 'targetcourseidnumber' => new external_value(PARAM_RAW, 'The course to copy to, identified by the value in the idnumber column in the course table.'),
-                'targetsectionname' => new external_value(PARAM_RAW, 'The section name, identified by the name column in the course_sections table.', VALUE_DEFAULT, null),
-                'targetslot' => new external_value(PARAM_INT, 'The slot for the new activity, where 0 is the top place in the activity. -1 is last.', VALUE_DEFAULT, null)
+                'targetsectionname' => new external_value(PARAM_RAW, 'The section name, identified by the name column in the course_sections table. "top" is for section 0.', VALUE_DEFAULT, null),
+                'targetslot' => new external_value(PARAM_INT, 'The slot for the new activity, where 0 is the top place in the activity. -1 is last.', VALUE_DEFAULT, null),
+                'postfix' => new external_value(PARAM_RAW, 'If this is set, idnumber of new module will be set to courseidnumber, including this here defined postfix.', VALUE_DEFAULT, null)
         ));
     }
 

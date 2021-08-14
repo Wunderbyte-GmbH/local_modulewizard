@@ -46,22 +46,30 @@ class modulewizard {
     }
 
     /**
-     * Function to handle basic copy operations.
+     * Function to handle copy operations.
      * @param object $sourcecm
      * @param string $targetcourseidnumber
      * @param null|string $targetsectionname
      * @param null|int $targetslot
+     * @param null|string $postfix
+     * @return bool
+     * @throws \coding_exception
+     * @throws \dml_exception
+     * @throws \moodle_exception
      */
     public static function copy_module(
             object $sourcecm,
             string $targetcourseidnumber,
             $targetsectionname = null,
-            $targetslot = null
+            $targetslot = null,
+            $postfix = null
             ) {
 
         global $DB, $CFG, $USER;
 
-        $warnings = [];
+        // This we need to run generator below.
+        require_once($CFG->dirroot . '/lib/phpunit/classes/util.php');
+
         // Throw error if we can't retrieve the courseid.
         if (!$targetcourseidnumber || (!$courseid = $DB->get_field('course', 'id', array('idnumber' => $targetcourseidnumber)))) {
             throw new \moodle_exception('coursenotfound',
@@ -70,31 +78,37 @@ class modulewizard {
                     null,
                     'The specified idnumber '. $targetcourseidnumber .' was not found');
         }
-        // Throw error if the section can not be identified.
-        if ($targetsectionname && ($sectionrecord = $DB->get_record('course_sections', array('name' => $targetsectionname, 'course' => $courseid)))) {
-            throw new \moodle_exception('sectionnotfound',
+
+        list($sourcecm, $context, $sourcemodule, $data, $cw) = can_update_moduleinfo($sourcecm);
+
+        $sourcecm->course = $courseid;
+        $sourcemodule = self::prepare_modinfo($sourcecm, $data);
+
+        if ($postfix) {
+            $sourcemodule->idnumber = $targetcourseidnumber . $postfix;
+        }
+
+        $sourcemodule->section = self::return_sectionid($targetsectionname, $courseid);
+
+        $generator =  \testing_util::get_data_generator();
+        if (!$record = $generator->create_module($sourcecm->modname, $sourcemodule)) {
+            throw new \moodle_exception('creationfailed',
                     'local_modulewizard',
                     null,
                     null,
-                    'The specified section '. $targetsectionname .' was not found');
+                    'Something went wrong during the creation of the module.');
         }
 
-        $course = get_course($courseid);
-        list($sourcecm, $context, $sourcemodule, $data, $cw) = can_update_moduleinfo($sourcecm);
 
-
-        // If after the Error check we still have $null as section, we know that we just add to the last section in the course.
-        if (!$targetsectionname) {
-            // Add to the last secton.
+        // If we have a slot, we move the module
+        if ($targetslot !== null) {
+            $mod = get_coursemodule_from_id($sourcecm->modname, $record->cmid);
+            $sectionrecord = $DB->get_record('course_sections', array('section' => $sourcemodule->section, 'course' => $courseid));
+            $modarray = explode(',', $sectionrecord->sequence);
+            if ($beforemodid = $modarray[$targetslot]) {
+                moveto_module($mod, $sectionrecord, $beforemodid);
+            }
         }
-        //$sourcemodule = self::prepare_modinfo($sourcemodule, $sourcecm->modname);
-        // Create the new module in the course.
-
-        // $sourcecm = self::prepare_modinfo($sourcecm, $sourcemodule);
-        // $newmodule = add_moduleinfo($sourcecm, $course);
-        // Move the new module at the right place.
-        // moveto_module()
-
         return true;
 
     }
@@ -120,5 +134,44 @@ class modulewizard {
 
         // $sourcemodule->module = $DB->get_field('modules', 'id', array('name' => $soucemodulename));
         return $sourcecm;
+    }
+
+    /**
+     * Function to return the right section id, based on the targetsectionname.
+     * If there is non, we add to the last section, if that fails, we add to the first.
+     * if targetsectionname is "top", we add to the first (section 0).
+     * @param null|string $targetsectionname
+     * @param int $courseid
+     * @return int
+     * @throws \dml_exception
+     * @throws \moodle_exception
+     */
+    private static function return_sectionid($targetsectionname, $courseid): int {
+
+        global $DB;
+        $sectionid = 0;
+        // Throw error if the section can not be identified.
+        if ($targetsectionname === 'top') {
+            $sectionid = 0;
+        } else if ($targetsectionname && (!$sectionid = $DB->get_field('course_sections', 'section', array('name' => $targetsectionname, 'course' => $courseid)))) {
+            throw new \moodle_exception('sectionnotfound',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'The specified section '. $targetsectionname .' was not found');
+        }
+
+        // If we have no name for the section, we just add to the last section.
+        // If we fail at retrieving it, we add to the first.
+        if (!$targetsectionname) {
+            $sql = '
+            SELECT MAX(section)
+            FROM {course_sections}
+            WHERE course = :courseid2';
+            if ($maxsectionid = $DB->get_field_sql($sql, array('courseid1' => $courseid, 'courseid2' => $courseid))) {
+                $sectionid = $maxsectionid;
+            }
+        }
+        return $sectionid;
     }
 }
