@@ -51,7 +51,7 @@ class modulewizard {
      * @param string $targetcourseidnumber
      * @param null|string $targetsectionname
      * @param null|int $targetslot
-     * @param null|string $postfix
+     * @param null|string $idnumber
      * @return bool
      * @throws \coding_exception
      * @throws \dml_exception
@@ -62,7 +62,7 @@ class modulewizard {
             string $targetcourseidnumber,
             $targetsectionname = null,
             $targetslot = null,
-            $postfix = null
+            $idnumber = null
             ) {
 
         global $DB, $CFG, $USER;
@@ -84,8 +84,8 @@ class modulewizard {
         $sourcecm->course = $courseid;
         $sourcemodule = self::prepare_modinfo($sourcecm, $data);
 
-        if ($postfix) {
-            $sourcemodule->idnumber = $targetcourseidnumber . $postfix;
+        if ($idnumber) {
+            $sourcemodule->idnumber = $idnumber;
         }
 
         $sourcemodule->section = self::return_sectionid($targetsectionname, $courseid);

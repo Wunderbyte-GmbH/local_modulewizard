@@ -37,7 +37,7 @@ class local_modulewizard_external extends external_api {
      * @param string $targetcourseidnumber
      * @param null|string $targetsectionname
      * @param null|int $targetslot
-     * @param null|string $postfix
+     * @param null|string $idnumber
      * @return int[]
      * @throws coding_exception
      * @throws invalid_parameter_exception
@@ -50,7 +50,9 @@ class local_modulewizard_external extends external_api {
             string $targetcourseidnumber,
             $targetsectionname = null,
             $targetslot = null,
-            $postfix = null) {
+            $idnumber = null) {
+
+        global $DB;
 
         $params = array(
                 'sourcecmid' => $sourcecmid,
@@ -58,21 +60,28 @@ class local_modulewizard_external extends external_api {
                 'targetcourseidnumber' => $targetcourseidnumber,
                 'targetsectionname' => $targetsectionname,
                 'targetslot' => $targetslot,
-                'postfix' => $postfix
+                'idnumber' => $idnumber
         );
 
         $params = self::validate_parameters(self::copy_module_parameters(), $params);
 
+        // First find out if the module name exists at all.
+
+        if (!$DB->record_exists('modules', array('name' => $params['sourcemodulename']))) {
+            throw new moodle_exception('invalidcoursemodulename', 'local_modulewizard', null, null,
+                    "Invalid source module name " . $params['sourcemodulename']);
+        }
+
         // Now security checks.
         if (!$cm = get_coursemodule_from_id($params['sourcemodulename'], $params['sourcecmid'])) {
             throw new moodle_exception('invalidcoursemodule ' . $params['sourcecmid'], 'local_modulewizard', null, null,
-                    "Invalid source module" . $params['quizid'] . ' ' . $params['sourcemodulename']);
+                    "Invalid source module" . $params['sourcecmid'] . ' ' . $params['sourcemodulename']);
         }
         $context = context_module::instance($cm->id);
         self::validate_context($context);
 
         // We try to copy the module to the target.
-        if (local_modulewizard\modulewizard::copy_module($cm, $targetcourseidnumber, $targetsectionname, $targetslot, $postfix)) {
+        if (local_modulewizard\modulewizard::copy_module($cm, $targetcourseidnumber, $targetsectionname, $targetslot, $idnumber)) {
             $success = 1;
         } else {
             $success = 0;
@@ -92,7 +101,7 @@ class local_modulewizard_external extends external_api {
                 'targetcourseidnumber' => new external_value(PARAM_RAW, 'The course to copy to, identified by the value in the idnumber column in the course table.'),
                 'targetsectionname' => new external_value(PARAM_RAW, 'The section name, identified by the name column in the course_sections table. "top" is for section 0.', VALUE_DEFAULT, null),
                 'targetslot' => new external_value(PARAM_INT, 'The slot for the new activity, where 0 is the top place in the activity. -1 is last.', VALUE_DEFAULT, null),
-                'postfix' => new external_value(PARAM_RAW, 'If this is set, idnumber of new module will be set to courseidnumber, including this here defined postfix.', VALUE_DEFAULT, null)
+                'idnumber' => new external_value(PARAM_RAW, 'To set the idnumber of the new activity.', VALUE_DEFAULT, null)
         ));
     }
 
