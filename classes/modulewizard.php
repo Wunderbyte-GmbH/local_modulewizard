@@ -121,7 +121,6 @@ class modulewizard {
             }
         }
 
-
         list($sourcecm, $context, $sourcemodule, $data, $cw) = can_update_moduleinfo($sourcecm);
 
         $sourcecm->course = $courseid;
@@ -137,7 +136,7 @@ class modulewizard {
 
         $sourcemodule->section = self::return_sectionid($targetsectionname, $courseid);
 
-        $generator =  \testing_util::get_data_generator();
+        $generator = \testing_util::get_data_generator();
         if (!$record = $generator->create_module($sourcecm->modname, $sourcemodule)) {
             throw new \moodle_exception('creationfailed',
                     'local_modulewizard',
@@ -146,8 +145,7 @@ class modulewizard {
                     'Something went wrong during the creation of the module.');
         }
 
-
-        // If we have a slot, we move the module
+        // If we have a slot, we move the module.
         if ($targetslot !== null) {
             $mod = get_coursemodule_from_id($sourcecm->modname, $record->cmid);
             $sectionrecord = $DB->get_record('course_sections', array('section' => $sourcemodule->section, 'course' => $courseid));
@@ -179,7 +177,6 @@ class modulewizard {
             }
         }
 
-        // $sourcemodule->module = $DB->get_field('modules', 'id', array('name' => $soucemodulename));
         return $sourcecm;
     }
 
@@ -200,7 +197,8 @@ class modulewizard {
         // Throw error if the section can not be identified.
         if ($targetsectionname === 'top') {
             $sectionid = 0;
-        } else if ($targetsectionname && (!$sectionid = $DB->get_field('course_sections', 'section', array('name' => $targetsectionname, 'course' => $courseid)))) {
+        } else if ($targetsectionname && (!$sectionid = $DB->get_field('course_sections', 'section',
+                array('name' => $targetsectionname, 'course' => $courseid)))) {
             throw new \moodle_exception('sectionnotfound',
                     'local_modulewizard',
                     null,
