@@ -35,9 +35,11 @@ class local_modulewizard_external extends external_api {
      * @param int $sourcecmid
      * @param string $sourcemodulename
      * @param string $targetcourseidnumber
+     * @param string $targetcourseshortname
      * @param null|string $targetsectionname
      * @param null|int $targetslot
      * @param null|string $idnumber
+     * @param null|string $shortname
      * @return int[]
      * @throws coding_exception
      * @throws invalid_parameter_exception
@@ -48,9 +50,11 @@ class local_modulewizard_external extends external_api {
             int $sourcecmid,
             string $sourcemodulename,
             string $targetcourseidnumber,
+            string $targetcourseshortname,
             $targetsectionname = null,
             $targetslot = null,
-            $idnumber = null) {
+            $idnumber = null,
+            $shortname = null) {
 
         global $DB;
 
@@ -58,30 +62,33 @@ class local_modulewizard_external extends external_api {
                 'sourcecmid' => $sourcecmid,
                 'sourcemodulename' => $sourcemodulename,
                 'targetcourseidnumber' => $targetcourseidnumber,
+                'targetcourseshortname' => $targetcourseshortname,
                 'targetsectionname' => $targetsectionname,
                 'targetslot' => $targetslot,
-                'idnumber' => $idnumber
+                'idnumber' => $idnumber,
+                'shortname' => $shortname
         );
 
         $params = self::validate_parameters(self::copy_module_parameters(), $params);
 
         // First find out if the module name exists at all.
-
         if (!core_component::is_valid_plugin_name('mod', $params['sourcemodulename'])) {
             throw new moodle_exception('invalidcoursemodulename', 'local_modulewizard', null, null,
                     "Invalid source module name " . $params['sourcemodulename']);
         }
 
-        // Now security checks.
+        // Now do some security checks.
         if (!$cm = get_coursemodule_from_id($params['sourcemodulename'], $params['sourcecmid'])) {
             throw new moodle_exception('invalidcoursemodule ' . $params['sourcecmid'], 'local_modulewizard', null, null,
                     "Invalid source module" . $params['sourcecmid'] . ' ' . $params['sourcemodulename']);
         }
+        
         $context = context_module::instance($cm->id);
         self::validate_context($context);
 
         // We try to copy the module to the target.
-        if (local_modulewizard\modulewizard::copy_module($cm, $targetcourseidnumber, $targetsectionname, $targetslot, $idnumber)) {
+        if (local_modulewizard\modulewizard::copy_module($cm, $targetcourseidnumber, $targetcourseshortname,
+                                                        $targetsectionname, $targetslot, $idnumber, $shortname)) {
             $success = 1;
         } else {
             $success = 0;
@@ -98,10 +105,12 @@ class local_modulewizard_external extends external_api {
         return new external_function_parameters(array(
                 'sourcecmid' => new external_value(PARAM_INT, 'The cmid of the module to copy.'),
                 'sourcemodulename' => new external_value(PARAM_RAW, 'The module type of the module to copy (eg. quiz or mooduell)'),
-                'targetcourseidnumber' => new external_value(PARAM_RAW, 'The course to copy to, identified by the value in the idnumber column in the course table.'),
+                'targetcourseidnumber' => new external_value(PARAM_RAW, 'The course to copy to, identified by the value in the idnumber column in the course table.', VALUE_DEFAULT, null),
+                'targetcourseshortname' => new external_value(PARAM_RAW, 'The course to copy to, identified by the value in the shortname column in the course table.', VALUE_DEFAULT, null),
                 'targetsectionname' => new external_value(PARAM_RAW, 'The section name, identified by the name column in the course_sections table. "top" is for section 0.', VALUE_DEFAULT, null),
                 'targetslot' => new external_value(PARAM_INT, 'The slot for the new activity, where 0 is the top place in the activity. -1 is last.', VALUE_DEFAULT, null),
-                'idnumber' => new external_value(PARAM_RAW, 'To set the idnumber of the new activity.', VALUE_DEFAULT, null)
+                'idnumber' => new external_value(PARAM_RAW, 'To set the idnumber of the new activity.', VALUE_DEFAULT, null),
+                'shortname' => new external_value(PARAM_RAW, 'To set the shortname of the new activity.', VALUE_DEFAULT, null)
         ));
     }
 

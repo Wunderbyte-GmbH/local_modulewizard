@@ -49,9 +49,11 @@ class modulewizard {
      * Function to handle copy operations.
      * @param object $sourcecm
      * @param string $targetcourseidnumber
+     * @param string $targetcourseshortname
      * @param null|string $targetsectionname
      * @param null|int $targetslot
      * @param null|string $idnumber
+     * @param null|string $shortname
      * @return bool
      * @throws \coding_exception
      * @throws \dml_exception
@@ -60,9 +62,11 @@ class modulewizard {
     public static function copy_module(
             object $sourcecm,
             string $targetcourseidnumber,
+            string $targetcourseshortname,
             $targetsectionname = null,
             $targetslot = null,
-            $idnumber = null
+            $idnumber = null,
+            $shortname = null
             ) {
 
         global $DB, $CFG, $USER;
@@ -70,14 +74,53 @@ class modulewizard {
         // This we need to run generator below.
         require_once($CFG->dirroot . '/lib/phpunit/classes/util.php');
 
-        // Throw error if we can't retrieve the courseid.
-        if (!$targetcourseidnumber || (!$courseid = $DB->get_field('course', 'id', array('idnumber' => $targetcourseidnumber)))) {
-            throw new \moodle_exception('coursenotfound',
+        // Courses can either be identified by targetcourseidnumber or by targetcourseshortname - not both.
+        // So throw an error if both are provided.
+        if ($targetcourseidnumber && $targetcourseshortname) {
+            throw new \moodle_exception('toomanyparams',
+                'local_modulewizard',
+                null,
+                null,
+                'Target courses can be identified either by targetcourseidnumber or by targetcourseshortname. ' .
+                'You cannot provide both.'
+            );
+        }
+
+        // Also throw an error, if both are missing.
+        if (!$targetcourseidnumber && !$targetcourseshortname) {
+            throw new \moodle_exception('notenoughparams',
+                'local_modulewizard',
+                null,
+                null,
+                'Target courses need to be identified either by targetcourseidnumber or by targetcourseshortname. ' .
+                'You need to provide one of them (not both).'
+            );
+        }
+
+        // Identification via targetcourseidnumber.
+        if ($targetcourseidnumber) {
+            // Throw error if we can't retrieve the courseid.
+            if (!$courseid = $DB->get_field('course', 'id', array('idnumber' => $targetcourseidnumber))) {
+                throw new \moodle_exception('coursenotfound',
                     'local_modulewizard',
                     null,
                     null,
-                    'The specified idnumber '. $targetcourseidnumber .' was not found');
+                    'The specified target course idnumber '. $targetcourseidnumber .' was not found');
+            }
         }
+
+        // Or identification via targetcourseshortname.
+        if ($targetcourseshortname) {
+            // Throw error if we can't retrieve the courseid.
+            if (!$courseid = $DB->get_field('course', 'id', array('shortname' => $targetcourseshortname))) {
+                throw new \moodle_exception('coursenotfound',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'The specified target course shortname '. $targetcourseshortname .' was not found');
+            }
+        }
+
 
         list($sourcecm, $context, $sourcemodule, $data, $cw) = can_update_moduleinfo($sourcecm);
 
@@ -86,6 +129,10 @@ class modulewizard {
 
         if ($idnumber) {
             $sourcemodule->idnumber = $idnumber;
+        }
+
+        if ($shortname) {
+            $sourcemodule->shortname = $shortname;
         }
 
         $sourcemodule->section = self::return_sectionid($targetsectionname, $courseid);
