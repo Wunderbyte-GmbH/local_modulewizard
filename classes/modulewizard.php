@@ -128,7 +128,7 @@ class modulewizard {
         // Make sure we don't miss any of the keys for the module creation.
         foreach ($sourcemodule as $key => $value) {
             if (!isset($sourcecm->$key)) {
-                $sourcecm->$key = $value;
+                $sourcecm->{$key} = $value;
             }
         }
 

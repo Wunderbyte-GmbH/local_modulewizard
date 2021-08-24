@@ -67,7 +67,7 @@ class local_modulewizard_external extends external_api {
 
         // First find out if the module name exists at all.
 
-        if (!$DB->record_exists('modules', array('name' => $params['sourcemodulename']))) {
+        if (!core_component::is_valid_plugin_name('mod', $params['sourcemodulename'])) {
             throw new moodle_exception('invalidcoursemodulename', 'local_modulewizard', null, null,
                     "Invalid source module name " . $params['sourcemodulename']);
         }
