@@ -82,7 +82,7 @@ class local_modulewizard_external extends external_api {
             throw new moodle_exception('invalidcoursemodule ' . $params['sourcecmid'], 'local_modulewizard', null, null,
                     "Invalid source module" . $params['sourcecmid'] . ' ' . $params['sourcemodulename']);
         }
-        
+
         $context = context_module::instance($cm->id);
         self::validate_context($context);
 
@@ -103,14 +103,28 @@ class local_modulewizard_external extends external_api {
      */
     public static function copy_module_parameters() {
         return new external_function_parameters(array(
-                'sourcecmid' => new external_value(PARAM_INT, 'The cmid of the module to copy.'),
-                'sourcemodulename' => new external_value(PARAM_RAW, 'The module type of the module to copy (eg. quiz or mooduell)'),
-                'targetcourseidnumber' => new external_value(PARAM_RAW, 'The course to copy to, identified by the value in the idnumber column in the course table.', VALUE_DEFAULT, null),
-                'targetcourseshortname' => new external_value(PARAM_RAW, 'The course to copy to, identified by the value in the shortname column in the course table.', VALUE_DEFAULT, null),
-                'targetsectionname' => new external_value(PARAM_RAW, 'The section name, identified by the name column in the course_sections table. "top" is for section 0.', VALUE_DEFAULT, null),
-                'targetslot' => new external_value(PARAM_INT, 'The slot for the new activity, where 0 is the top place in the activity. -1 is last.', VALUE_DEFAULT, null),
-                'idnumber' => new external_value(PARAM_RAW, 'To set the idnumber of the new activity.', VALUE_DEFAULT, null),
-                'shortname' => new external_value(PARAM_RAW, 'To set the shortname of the new activity.', VALUE_DEFAULT, null)
+                'sourcecmid' => new external_value(PARAM_INT,
+                    'The cmid of the module to copy.'),
+                'sourcemodulename' => new external_value(PARAM_RAW,
+                    'The module type of the module to copy (eg. quiz or mooduell)'),
+                'targetcourseidnumber' => new external_value(PARAM_RAW,
+                    'The course to copy to, identified by the value in the idnumber column in the course table.',
+                    VALUE_DEFAULT, null),
+                'targetcourseshortname' => new external_value(PARAM_RAW,
+                    'The course to copy to, identified by the value in the shortname column in the course table.',
+                    VALUE_DEFAULT, null),
+                'targetsectionname' => new external_value(PARAM_RAW,
+                    'The section name, identified by the name column in the course_sections table. "top" is for section 0.',
+                    VALUE_DEFAULT, null),
+                'targetslot' => new external_value(PARAM_INT,
+                    'The slot for the new activity, where 0 is the top place in the activity. -1 is last.',
+                    VALUE_DEFAULT, null),
+                'idnumber' => new external_value(PARAM_RAW,
+                    'To set the idnumber of the new activity.',
+                    VALUE_DEFAULT, null),
+                'shortname' => new external_value(PARAM_RAW,
+                    'To set the shortname of the new activity.',
+                    VALUE_DEFAULT, null)
         ));
     }
 

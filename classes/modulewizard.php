@@ -32,9 +32,9 @@ require_once("$CFG->dirroot/course/lib.php");
 require_once("$CFG->dirroot/course/modlib.php");
 
 /**
- * Class mooduell
+ * Class modulewizard
  *
- * @package mod_mooduell
+ * @package local_modulewizard
  */
 class modulewizard {
 
@@ -160,10 +160,9 @@ class modulewizard {
 
     /**
      * The function add_moduleinfo() expects some further information, which we add here.
+     * @param \stdClass $sourcecm
      * @param \stdClass $sourcemodule
-     * @param string $soucemodulename
      * @return \stdClass
-     * @throws \dml_exception
      */
     private static function prepare_modinfo(\stdClass $sourcecm, \stdClass $sourcemodule) :\stdClass {
         global $DB;
