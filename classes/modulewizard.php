@@ -61,8 +61,8 @@ class modulewizard {
      */
     public static function copy_module(
             object $sourcecm,
-            string $targetcourseidnumber,
-            string $targetcourseshortname,
+            $targetcourseidnumber = null,
+            $targetcourseshortname = null,
             $targetsectionname = null,
             $targetslot = null,
             $idnumber = null,

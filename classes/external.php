@@ -34,8 +34,8 @@ class local_modulewizard_external extends external_api {
      * Function to actually copy a module to a new course and course section.
      * @param int $sourcecmid
      * @param string $sourcemodulename
-     * @param string $targetcourseidnumber
-     * @param string $targetcourseshortname
+     * @param null|string $targetcourseidnumber
+     * @param null|string $targetcourseshortname
      * @param null|string $targetsectionname
      * @param null|int $targetslot
      * @param null|string $idnumber
@@ -49,8 +49,8 @@ class local_modulewizard_external extends external_api {
     public static function copy_module(
             int $sourcecmid,
             string $sourcemodulename,
-            string $targetcourseidnumber,
-            string $targetcourseshortname,
+            $targetcourseidnumber = null,
+            $targetcourseshortname = null,
             $targetsectionname = null,
             $targetslot = null,
             $idnumber = null,
