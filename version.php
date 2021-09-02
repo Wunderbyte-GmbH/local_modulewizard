@@ -26,6 +26,6 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_modulewizard';
 $plugin->release = '0.1.0';
-$plugin->version = 2021081200;
-$plugin->requires = 2020110900;
-$plugin->maturity = MATURITY_ALPHA;
+$plugin->version = 2021090100;
+$plugin->requires = 2020061500;
+$plugin->maturity = MATURITY_STABLE;
