@@ -127,7 +127,18 @@ class modulewizard {
         $sourcemodule = self::prepare_modinfo($sourcecm, $data);
 
         if ($idnumber) {
-            $sourcemodule->idnumber = $idnumber;
+            // When we want to set idnumber, it has to be unique.
+            if (!$DB->record_exists('course_modules', array(
+                    'idnumber' => $idnumber,
+                    'module' => $sourcecm->module))) {
+                $sourcemodule->idnumber = $idnumber;
+            } else {
+                throw new \moodle_exception('idnumberexistsalready',
+                        'local_modulewizard',
+                        null,
+                        null,
+                        "The idnumber $idnumber you want to give this new module exists already.");
+            }
         }
 
         if ($shortname) {
