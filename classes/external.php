@@ -87,8 +87,14 @@ class local_modulewizard_external extends external_api {
         self::validate_context($context);
 
         // We try to copy the module to the target.
-        if (local_modulewizard\modulewizard::copy_module($cm, $targetcourseidnumber, $targetcourseshortname,
-                                                        $targetsectionname, $targetslot, $idnumber, $shortname)) {
+        if (local_modulewizard\modulewizard::copy_module(
+                $cm,
+                $params['targetcourseidnumber'],
+                $params['targetcourseshortname'],
+                $params['targetsectionname'],
+                $params['targetslot'],
+                $params['idnumber'],
+                $params['shortname'])) {
             $success = 1;
         } else {
             $success = 0;
@@ -114,7 +120,7 @@ class local_modulewizard_external extends external_api {
                     'The course to copy to, identified by the value in the shortname column in the course table.',
                     VALUE_DEFAULT, null),
                 'targetsectionname' => new external_value(PARAM_RAW,
-                    'The section name, identified by the name column in the course_sections table. "top" is for section 0.',
+                    'The section name, identified by the name column in the course_sections table. "top" is for section 0, null for last.',
                     VALUE_DEFAULT, null),
                 'targetslot' => new external_value(PARAM_INT,
                     'The slot for the new activity, where 0 is the top place in the activity. -1 is last.',
