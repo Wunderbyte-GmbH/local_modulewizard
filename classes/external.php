@@ -144,4 +144,99 @@ class local_modulewizard_external extends external_api {
                 )
         );
     }
+
+    /**
+     * @param string $targetmodulename
+     * @param null|string $targetcourseidnumber
+     * @param null|string $targetcourseshortname
+     * @param null|string $targetsectionname
+     * @param null|int $targetslot
+     * @param null|string $targetidnumber
+     * @param false $deleteall
+     * @return int[]
+     * @throws invalid_parameter_exception
+     * @throws moodle_exception
+     */
+    public static function delete_module(
+            string $targetmodulename,
+            $targetidnumber = null,
+            $targetcourseidnumber = null,
+            $targetcourseshortname = null,
+            $targetsectionname = null,
+            $targetslot = null,
+            $deleteall = false) {
+
+        global $DB;
+
+        $params = array(
+                'targetmodulename' => $targetmodulename,
+                'targetcourseidnumber' => $targetcourseidnumber,
+                'targetcourseshortname' => $targetcourseshortname,
+                'targetsectionname' => $targetsectionname,
+                'targetslot' => $targetslot,
+                'targetidnumber' => $targetidnumber,
+                'deleteall' => $deleteall
+        );
+
+        $params = self::validate_parameters(self::delete_module_parameters(), $params);
+
+        // First find out if the module name exists at all.
+        if (!core_component::is_valid_plugin_name('mod', $params['targetmodulename'])) {
+            throw new moodle_exception('invalidcoursemodulename', 'local_modulewizard', null, null,
+                    "Invalid module name " . $params['sourcemodulename']);
+        }
+
+        // We try to delete the module.
+        if (local_modulewizard\modulewizard::delete_module(
+                $params['targetmodulename'],
+                $params['targetidnumber'],
+                $params['targetcourseidnumber'],
+                $params['targetcourseshortname'],
+                $params['targetsectionname'],
+                $params['targetslot'],
+                $params['deleteall'])) {
+            $success = 1;
+        } else {
+            $success = 0;
+        }
+
+        return ['status' => $success];
+    }
+
+    public static function delete_module_parameters() {
+        return new external_function_parameters(array(
+                'targetmodulename' => new external_value(PARAM_RAW,
+                        'The module type of the module to delete (eg. quiz or mooduell)'),
+                'targetidnumber' => new external_value(PARAM_RAW,
+                        'Most precise way to delete exactly one activity.',
+                        VALUE_DEFAULT, null),
+                'targetcourseidnumber' => new external_value(PARAM_RAW,
+                        'The course where to find the activity to delete.
+                        Identified by the value in the idnumber column in the course table.',
+                        VALUE_DEFAULT, null),
+                'targetcourseshortname' => new external_value(PARAM_RAW,
+                        'The course where to find the activity to delete.
+                        Identified by the value in the shortname column in the course table.',
+                        VALUE_DEFAULT, null),
+                'targetsectionname' => new external_value(PARAM_RAW,
+                        'The section name, identified by the name column in the course_sections table. "top" is for section 0.',
+                        VALUE_DEFAULT, null),
+                'targetslot' => new external_value(PARAM_INT,
+                        'The slot of the activity to delete, where 0 is the top place in the activity. -1 is last.',
+                        VALUE_DEFAULT, null),
+                'deleteall' => new external_value(PARAM_BOOL, 'TRUE to delete more than one instance.',
+                        VALUE_DEFAULT, false)
+        ));
+    }
+
+    /**
+     * Defines the return values for delete.
+     * @return external_single_structure
+     */
+    public static function delete_module_returns() {
+        return new external_single_structure(array(
+                        'status' => new external_value(PARAM_INT, 'status')
+                )
+        );
+    }
 }

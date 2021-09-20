@@ -24,6 +24,8 @@
 
 namespace local_modulewizard;
 
+use core\event\course_section_updated;
+
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
@@ -74,52 +76,7 @@ class modulewizard {
         // This we need to run generator below.
         require_once($CFG->dirroot . '/lib/phpunit/classes/util.php');
 
-        // Courses can either be identified by targetcourseidnumber or by targetcourseshortname - not both.
-        // So throw an error if both are provided.
-        if ($targetcourseidnumber && $targetcourseshortname) {
-            throw new \moodle_exception('toomanyparams',
-                'local_modulewizard',
-                null,
-                null,
-                'Target courses can be identified either by targetcourseidnumber or by targetcourseshortname. ' .
-                'You cannot provide both.'
-            );
-        }
-
-        // Also throw an error, if both are missing.
-        if (!$targetcourseidnumber && !$targetcourseshortname) {
-            throw new \moodle_exception('notenoughparams',
-                'local_modulewizard',
-                null,
-                null,
-                'Target courses need to be identified either by targetcourseidnumber or by targetcourseshortname. ' .
-                'You need to provide one of them (not both).'
-            );
-        }
-
-        // Identification via targetcourseidnumber.
-        if ($targetcourseidnumber) {
-            // Throw error if we can't retrieve the courseid.
-            if (!$courseid = $DB->get_field('course', 'id', array('idnumber' => $targetcourseidnumber))) {
-                throw new \moodle_exception('coursenotfound',
-                    'local_modulewizard',
-                    null,
-                    null,
-                    'The specified target course idnumber '. $targetcourseidnumber .' was not found');
-            }
-        }
-
-        // Or identification via targetcourseshortname.
-        if ($targetcourseshortname) {
-            // Throw error if we can't retrieve the courseid.
-            if (!$courseid = $DB->get_field('course', 'id', array('shortname' => $targetcourseshortname))) {
-                throw new \moodle_exception('coursenotfound',
-                    'local_modulewizard',
-                    null,
-                    null,
-                    'The specified target course shortname '. $targetcourseshortname .' was not found');
-            }
-        }
+        $courseid = self::return_courseid($targetcourseidnumber, $targetcourseshortname);
 
         list($sourcecm, $context, $sourcemodule, $data, $cw) = can_update_moduleinfo($sourcecm);
 
@@ -145,7 +102,8 @@ class modulewizard {
             $sourcemodule->shortname = $shortname;
         }
 
-        $sourcemodule->section = self::return_sectionid($targetsectionname, $courseid);
+        $section = self::return_section($targetsectionname, $courseid);
+        $sourcemodule->section = $section->section;
 
         $generator = \testing_util::get_data_generator();
         if (!$record = $generator->create_module($sourcecm->modname, $sourcemodule)) {
@@ -166,7 +124,86 @@ class modulewizard {
             }
         }
         return true;
+    }
 
+    /**
+     * Function to delete module or modules identified by different parameters.
+     * @param $targetmodulename
+     * @param null $targetidnumber
+     * @param null $targetcourseidnumber
+     * @param null $targetcourseshortname
+     * @param null $targetsectionname
+     * @param null $targetslot
+     * @param null $shortname
+     * @param false $deleteall
+     * @throws \dml_exception
+     * @throws \moodle_exception
+     */
+    public static function delete_module(
+            $targetmodulename,
+            $targetidnumber = null,
+            $targetcourseidnumber = null,
+            $targetcourseshortname = null,
+            $targetsectionname = null,
+            $targetslot = null,
+            $deleteall = false
+            ) {
+
+        global $DB;
+
+        if ($targetidnumber) {
+            $sql = "SELECT * 
+                FROM {course_modules} cm
+                INNER JOIN {modules} m
+                ON m.name=:modulename
+                WHERE cm.idnumber=:idnumber";
+            $params = array('modulename' => $targetmodulename,
+                    'idnumber' => $targetidnumber);
+
+            if ($cmtodelete = $DB->get_records_sql($sql, $params)) {
+                course_delete_module($cmtodelete->id);
+                return true;
+            } else {
+                throw new \moodle_exception('targetidnumbernotfound',
+                        'local_modulewizard',
+                        null,
+                        null,
+                        'No module with the given idnumber was found.');
+            }
+        }
+
+
+        if (!$courseid = self::return_courseid($targetcourseidnumber, $targetcourseshortname)) {
+            return false;
+        }
+
+        // Return all matchin cms in a given course.
+        $cmstodelete = self::get_cms_from_course($courseid, $targetmodulename, $targetsectionname, $targetslot);
+
+        if (count($cmstodelete) == 1) {
+            $cm = reset($cmstodelete);
+            course_delete_module($cm->id);
+            return true;
+        } else if (count($cmstodelete) > 1) {
+            if ($deleteall) {
+                foreach($cmstodelete as $item) {
+                    course_delete_module($item->id);
+                }
+                return true;
+            } else {
+                throw new \moodle_exception('tomanymodulesfound',
+                        'local_modulewizard',
+                        null,
+                        null,
+                        'More than one module would be deleted with this setting. If you want to proceed, set deleteall param to 1');
+            }
+        } else {
+            throw new \moodle_exception('nomodulefound',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'No module was found with your setting. please check again');
+        }
     }
 
     /**
@@ -200,33 +237,229 @@ class modulewizard {
      * @throws \dml_exception
      * @throws \moodle_exception
      */
-    private static function return_sectionid($targetsectionname, $courseid): int {
+    private static function return_section($targetsectionname, $courseid): object {
 
         global $DB;
-        $sectionid = 0;
-        // Throw error if the section can not be identified.
-        if ($targetsectionname === 'top') {
-            $sectionid = 0;
-        } else if ($targetsectionname && (!$sectionid = $DB->get_field('course_sections', 'section',
-                array('name' => $targetsectionname, 'course' => $courseid)))) {
+
+        $sql = "SELECT cs.*
+                FROM mdl_course_sections cs";
+
+        $where = "
+                WHERE cs.course =:courseid1";
+
+        $params = array('courseid1' => $courseid);
+
+        if ($targetsectionname === "last") {
+            $where .= "
+                AND cs.section = (SELECT MAX(section)
+                FROM mdl_course_sections
+                WHERE course=:courseid2)";
+            $params['courseid2'] = $courseid;
+        } else if ($targetsectionname === 'top') {
+            $where .= "
+                AND cs.section=0";
+        } else {
+            $where .= "
+                AND cs.name=:sectionname";
+            $params['sectionname'] = $targetsectionname;
+        }
+
+        $sql .= $where;
+
+        if ($result = $DB->get_record_sql($sql, $params)) {
+            return $result;
+        } else {
             throw new \moodle_exception('sectionnotfound',
                     'local_modulewizard',
                     null,
                     null,
                     'The specified section '. $targetsectionname .' was not found');
         }
+    }
 
-        // If we have no name for the section, we just add to the last section.
-        // If we fail at retrieving it, we add to the first.
-        if (!$targetsectionname) {
-            $sql = '
-            SELECT MAX(section)
-            FROM {course_sections}
-            WHERE course = :courseid2';
-            if ($maxsectionid = $DB->get_field_sql($sql, array('courseid1' => $courseid, 'courseid2' => $courseid))) {
-                $sectionid = $maxsectionid;
+    /**
+     * Verify if the parameters and return the corresponding courseid.
+     * @param string|null $targetcourseidnumber
+     * @param string|null $targetcourseshortname
+     * @return false|mixed
+     * @throws \dml_exception
+     * @throws \moodle_exception
+     */
+    private static function return_courseid(string $targetcourseidnumber = null,
+            string $targetcourseshortname = null) {
+
+        global $DB;
+
+        // Courses can either be identified by targetcourseidnumber or by targetcourseshortname - not both.
+        // So throw an error if both are provided.
+        if ($targetcourseidnumber && $targetcourseshortname) {
+            throw new \moodle_exception('toomanyparams',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'Target courses can be identified either by targetcourseidnumber or by targetcourseshortname. ' .
+                    'You cannot provide both.'
+            );
+        }
+
+        // Also throw an error, if both are missing.
+        if (!$targetcourseidnumber && !$targetcourseshortname) {
+            throw new \moodle_exception('notenoughparams',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'Target courses need to be identified either by targetcourseidnumber or by targetcourseshortname. ' .
+                    'You need to provide one of them (not both).'
+            );
+        }
+
+        // Identification via targetcourseidnumber.
+        if ($targetcourseidnumber) {
+            // Throw error if we can't retrieve the courseid.
+            if (!$courseid = $DB->get_field('course', 'id', array('idnumber' => $targetcourseidnumber))) {
+                throw new \moodle_exception('coursenotfound',
+                        'local_modulewizard',
+                        null,
+                        null,
+                        'The specified target course idnumber '. $targetcourseidnumber .' was not found');
             }
         }
-        return $sectionid;
+
+        // Or identification via targetcourseshortname.
+        if ($targetcourseshortname) {
+            // Throw error if we can't retrieve the courseid.
+            if (!$courseid = $DB->get_field('course', 'id', array('shortname' => $targetcourseshortname))) {
+                throw new \moodle_exception('coursenotfound',
+                        'local_modulewizard',
+                        null,
+                        null,
+                        'The specified target course shortname '. $targetcourseshortname .' was not found');
+            }
+        }
+        return $courseid;
+    }
+
+    /**
+     * Return cm objects from course.
+     * @param int $courseid
+     * @param string|null $modname
+     * @param string|null $sectionname
+     * @param bool $onlyvisible
+     * @return array
+     * @throws \dml_exception
+     * @throws \moodle_exception
+     */
+    private function get_cms_from_course(int $courseid,
+            string $modname = null,
+            string $sectionname = null,
+            int $targetslot = null,
+            bool $onlyvisible = false) {
+        global $DB;
+
+        $sql = "SELECT cm.*, m.name as modname
+                  FROM {modules} m, {course_modules} cm";
+
+        $where = "
+        WHERE cm.course =:courseid
+        AND cm.module = m.id";
+
+        $params = array('courseid' => $courseid);
+        // If there is a modname, we adapt sql.
+        if ($modname) {
+            $where .= "
+            AND m.name =:modname";
+            $params['modname'] = $modname;
+        }
+        // If we only want to return visible cms.
+        if ($onlyvisible) {
+            $where .= "
+            AND m.visible = 1";
+        }
+
+        // Join the sql parts.
+        $sql .= $where;
+
+        $cmsincourse = $DB->get_records_sql($sql, $params);
+
+        // As sequences are stored in DB as a comma separated string, there is no good way to filter this via sql.
+        if (!$sectionname) {
+            // If we don't want to filter for section, we return all cms in course.
+            return $cmsincourse;
+        } else {
+            if ($sectionsequence = self::return_section_sequence($courseid, $sectionname)) {
+
+                // Get a list of all cm ids in this section.
+                $cmsinsection = explode(',', $sectionsequence);
+
+                // If we also have a slot defined, we reduce the array accordingly.
+                if ($targetslot) {
+                    $cmsinsection = self::return_cm_in_section_slot($cmsinsection, $targetslot);
+                }
+
+                // Prepare $result.
+                $result = [];
+                // Check which of the $cmsincourse are also part of this section.
+                foreach ($cmsincourse as $cmincourse) {
+                    if (in_array($cmincourse->id, $cmsinsection)) {
+                        $result[] = $cmincourse;
+                    }
+                }
+                return $result;
+            } else {
+                throw new \moodle_exception('sectionnotfound',
+                        'local_modulewizard',
+                        null,
+                        null,
+                        'The specified section '. $sectionname .' was not found');
+            }
+        }
+    }
+
+    /**
+     * Function receives an array of ints with cmids in a given section.
+     * This information is not very relyable to calcualte actualy wanted slot, because sometimes cms are deleted...
+     * ... and sequence information in course section is not updated properly, eg deletion in progress etc.
+     * Therefore, we don't just return the cmid by key, but we verify for every cm if it is actually in the section.
+     * @param array $cmsinsection
+     * @param int $slot
+     * @return array|null
+     * @throws \dml_exception
+     */
+    private function return_cm_in_section_slot(array $cmsinsection, int $slot) {
+        global $DB;
+
+        $stillexistingcmids = [];
+
+        foreach ($cmsinsection as $cmid) {
+            if ($DB->record_exists('course_modules', array("id" => $cmid, 'deletioninprogress' => 0))) {
+                $stillexistingcmids[] = $cmid;
+            }
+        }
+
+        if ($slot == -1) {
+            return array_pop($stillexistingcmids);
+        } else if (isset($stillexistingcmids[$slot])) {
+            return [$stillexistingcmids[$slot]];
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Return section sequence by sectionname & courseid.
+     * This uses the return_sectionid function for cohesion.
+     * @param $courseid
+     * @param $sectionname
+     * @return false|mixed|null
+     * @throws \dml_exception
+     * @throws \moodle_exception
+     */
+    private function return_section_sequence($courseid, $sectionname) {
+        global $DB;
+        if ($section = self::return_section($sectionname, $courseid)) {
+            return $section->sequence;
+        } else {
+            return null;
+        }
     }
 }

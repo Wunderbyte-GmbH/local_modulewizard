@@ -49,5 +49,17 @@ $functions = array(
                 'services' => array(
                         'local_modulewizard_external'
                 )
+        ),
+        'local_modulewizard_delete_module' => array(
+                'classname' => 'local_modulewizard_external',
+                'methodname' => 'delete_module',
+                'classpath' => 'local/modulewizard/classes/external.php',
+                'description' => 'Deletes a module from a certain place.',
+                'type' => 'write',
+                'ajax' => true,
+                'capabilities' => 'local/modulewizard:copymodule',
+                'services' => array(
+                        'local_modulewizard_external'
+                )
         )
 );
