@@ -1,8 +1,10 @@
 # Module Wizard #
 
-TODO Describe the plugin shortly here.
+Module Wizard allows to trigger Admin Tasks via REST API.
 
-TODO Provide more detailed description here.
+Supported tasks for the initial version are copying of a module and deleting of a module.
+
+Module wizard can be used for one task, but it's strength comes with using it in combination with Postman, when one can easily run a few hundred or a thousand tasks in one step.
 
 ## Installing via uploaded ZIP file ##
 
@@ -26,6 +28,15 @@ Alternatively, you can run
     $ php admin/cli/upgrade.php
 
 to complete the installation from the command line.
+
+After every kind of installation, you need to manually create a webservice token for your admin user. To do this, go here:
+
+    {your/moodle/dirroot}/admin/webservice/tokens.php
+
+Make sure you have the webservices enabled on your system, otherwise this won't work.
+
+    {your/moodle/dirroot}/admin/settings.php?section=optionalsubsystems
+
 
 ## License ##
 
