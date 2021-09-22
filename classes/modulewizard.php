@@ -396,7 +396,7 @@ class modulewizard {
                 $cmsinsection = explode(',', $sectionsequence);
 
                 // If we also have a slot defined, we reduce the array accordingly.
-                if ($targetslot) {
+                if ($targetslot !== null) {
                     $cmsinsection = self::return_cm_in_section_slot($cmsinsection, $targetslot);
                 }
 
