@@ -118,8 +118,12 @@ class modulewizard {
         if ($targetslot !== null) {
             $mod = get_coursemodule_from_id($sourcecm->modname, $record->cmid);
             $sectionrecord = $DB->get_record('course_sections', array('section' => $sourcemodule->section, 'course' => $courseid));
-            $modarray = explode(',', $sectionrecord->sequence);
-            if ($beforemodid = $modarray[$targetslot]) {
+            $cmsinsection = explode(',', $sectionrecord->sequence);
+
+
+            // Here we run a verification. There can be some cases, where the slot is not correct.
+            // Therefore, we run a function which checks every cm if It's not yet deleted or otherwise unavailable.
+            if (list($beforemodid) = self::return_cm_in_section_slot($cmsinsection, $targetslot)) {
                 moveto_module($mod, $sectionrecord, $beforemodid);
             }
         }
@@ -425,7 +429,7 @@ class modulewizard {
      * @return array|null
      * @throws \dml_exception
      */
-    private function return_cm_in_section_slot(array $cmsinsection, int $slot) {
+    private static function return_cm_in_section_slot(array $cmsinsection, int $slot) {
         global $DB;
 
         $stillexistingcmids = [];
