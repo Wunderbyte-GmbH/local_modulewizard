@@ -120,7 +120,8 @@ class local_modulewizard_external extends external_api {
                     'The course to copy to, identified by the value in the shortname column in the course table.',
                     VALUE_DEFAULT, null),
                 'targetsectionname' => new external_value(PARAM_RAW,
-                    'The section name, identified by the name column in the course_sections table. "top" is for section 0, null for last.',
+                    'The section name, identified by the name column in the course_sections table.
+                        "top" is for section 0, null for last.',
                     VALUE_DEFAULT, null),
                 'targetslot' => new external_value(PARAM_INT,
                     'The slot for the new activity, where 0 is the top place in the activity. -1 is last.',

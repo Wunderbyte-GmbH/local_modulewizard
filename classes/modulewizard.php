@@ -120,7 +120,6 @@ class modulewizard {
             $sectionrecord = $DB->get_record('course_sections', array('section' => $sourcemodule->section, 'course' => $courseid));
             $cmsinsection = explode(',', $sectionrecord->sequence);
 
-
             // Here we run a verification. There can be some cases, where the slot is not correct.
             // Therefore, we run a function which checks every cm if It's not yet deleted or otherwise unavailable.
             if (list($beforemodid) = self::return_cm_in_section_slot($cmsinsection, $targetslot)) {
@@ -156,7 +155,7 @@ class modulewizard {
         global $DB;
 
         if ($targetidnumber) {
-            $sql = "SELECT * 
+            $sql = "SELECT *
                 FROM {course_modules} cm
                 INNER JOIN {modules} m
                 ON m.name=:modulename
@@ -176,7 +175,6 @@ class modulewizard {
             }
         }
 
-
         if (!$courseid = self::return_courseid($targetcourseidnumber, $targetcourseshortname)) {
             return false;
         }
@@ -190,7 +188,7 @@ class modulewizard {
             return true;
         } else if (count($cmstodelete) > 1) {
             if ($deleteall) {
-                foreach($cmstodelete as $item) {
+                foreach ($cmstodelete as $item) {
                     course_delete_module($item->id);
                 }
                 return true;
@@ -199,7 +197,8 @@ class modulewizard {
                         'local_modulewizard',
                         null,
                         null,
-                        'More than one module would be deleted with this setting. If you want to proceed, set deleteall param to 1');
+                        'More than one module would be deleted with this setting.
+                            If you want to proceed, set deleteall param to 1');
             }
         } else {
             throw new \moodle_exception('nomodulefound',
@@ -396,7 +395,7 @@ class modulewizard {
      * @throws \dml_exception
      * @throws \moodle_exception
      */
-    private function get_cms_from_course(int $courseid,
+    private static function get_cms_from_course(int $courseid,
             string $modname = null,
             string $sectionname = null,
             int $targetslot = null,
@@ -501,7 +500,7 @@ class modulewizard {
      * @throws \dml_exception
      * @throws \moodle_exception
      */
-    private function return_section_sequence($courseid, $sectionname) {
+    private static function return_section_sequence($courseid, $sectionname) {
         global $DB;
         if ($section = self::return_section($sectionname, $courseid)) {
             return $section->sequence;
