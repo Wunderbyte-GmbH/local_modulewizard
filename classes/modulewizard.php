@@ -296,7 +296,7 @@ class modulewizard {
 
         $params = array('courseid1' => $courseid);
 
-        if ($targetsectionname === "last") {
+        if (empty($targetsectionname) || $targetsectionname === "last") {
             $where .= "
                 AND cs.section = (SELECT MAX(section)
                 FROM mdl_course_sections
