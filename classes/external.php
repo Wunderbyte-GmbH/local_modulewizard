@@ -239,4 +239,67 @@ class local_modulewizard_external extends external_api {
                 )
         );
     }
+
+    /**
+     * Function to copy a course and create a new course with a new name.
+     *
+     * @param integer $sourcecourseid
+     * @param string $newcourseshortname
+     * @param string|null $newcoursename
+     * @return void
+     */
+    public static function create_course(
+        int $sourcecourseid,
+        string $newcourseshortname,
+        string $newcoursename = null) {
+
+        global $DB;
+
+        $params = array(
+                'sourcecourseid' => $sourcecourseid,
+                'newcourseshortname' => $newcourseshortname,
+                'newcoursename' => $newcoursename
+        );
+
+        $params = self::validate_parameters(self::create_course_parameters(), $params);
+
+        // We try to copy the module to the target.
+        if (local_modulewizard\modulewizard::create_course(
+                $params['sourcecourseid'],
+                $params['newcourseshortname'],
+                $params['newcoursename'])) {
+            $success = 1;
+        } else {
+            $success = 0;
+        }
+
+        return ['status' => $success];
+    }
+
+    /**
+     * Defines the parameters for create_course.
+     * @return external_function_parameters
+     */
+    public static function create_course_parameters() {
+        return new external_function_parameters(array(
+                'sourcecourseid' => new external_value(PARAM_INT,
+                    'The cmid of the module to copy.'),
+                'newcourseshortname' => new external_value(PARAM_RAW,
+                    'The shortname of the new course'),
+                'newcoursename' => new external_value(PARAM_RAW,
+                    'The name of the new course',
+                    VALUE_DEFAULT, null)
+        ));
+    }
+
+    /**
+     * Defines the return values for create_course.
+     * @return external_single_structure
+     */
+    public static function create_course_returns() {
+        return new external_single_structure(array(
+                        'status' => new external_value(PARAM_INT, 'status')
+                )
+        );
+    }
 }

@@ -211,6 +211,49 @@ class modulewizard {
     }
 
     /**
+     * Function to copy course and create new course from template.
+     *
+     * @param integer $sourcecourseid
+     * @param string $newcourseshortname
+     * @param string|null $newcoursename
+     * @return void
+     */
+    public static function create_course(
+        int $sourcecourseid,
+        string $newcourseshortname,
+        $newcoursename = null
+        ) {
+
+        global $DB, $CFG, $USER;
+
+        // This we need to run generator below.
+        require_once($CFG->dirroot . '/lib/phpunit/classes/util.php');
+
+        if (!$sourcecourse = get_course($sourcecourseid)) {
+            throw new \moodle_exception('coursenotfound',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'Couldn\'t find the source course');
+        }
+
+        $sourcecourse->shortname = $newcourseshortname;
+        $sourcecourse->fullname = $newcoursename ? $newcoursename : $newcourseshortname;
+
+        $generator = \testing_util::get_data_generator();
+
+        if (!$record = $generator->create_course($sourcecourse)) {
+            throw new \moodle_exception('creationfailed',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'Something went wrong during the creation of the module.');
+        }
+
+        return true;
+    }
+
+    /**
      * The function add_moduleinfo() expects some further information, which we add here.
      * @param \stdClass $sourcecm
      * @param \stdClass $sourcemodule

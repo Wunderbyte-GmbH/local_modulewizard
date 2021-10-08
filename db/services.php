@@ -61,5 +61,17 @@ $functions = array(
                 'services' => array(
                         'local_modulewizard_external'
                 )
+        ),
+        'local_modulewizard_create_course' => array(
+                'classname' => 'local_modulewizard_external',
+                'methodname' => 'create_course',
+                'classpath' => 'local/modulewizard/classes/external.php',
+                'description' => 'Copies a course by id.',
+                'type' => 'write',
+                'ajax' => true,
+                'capabilities' => 'local/modulewizard:copymodule',
+                'services' => array(
+                        'local_modulewizard_external'
+                )
         )
 );
