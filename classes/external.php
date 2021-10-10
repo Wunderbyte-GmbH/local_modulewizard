@@ -147,6 +147,106 @@ class local_modulewizard_external extends external_api {
     }
 
     /**
+     * Generic function to update module.
+     *
+     * @param integer $sourcecmid
+     * @param string $sourcemodulename
+     * @param [type] $targetcourseidnumber
+     * @param [type] $targetcourseshortname
+     * @param [type] $targetsectionname
+     * @param [type] $targetslot
+     * @param [type] $idnumber
+     * @param [type] $shortname
+     * @return void
+     */
+    public static function update_module(
+        string $sourcemodulename,
+        int $sourcecmid = null,
+        $sourcemoduleidnumber = null,
+        $paramsarray = null) {
+
+        global $DB;
+
+        $params = array(
+                'sourcemodulename' => $sourcemodulename,
+                'sourcecmid' => $sourcecmid,
+                'sourcemoduleidnumber' => $sourcemoduleidnumber,
+                'paramsarray' => $paramsarray
+        );
+
+        $params = self::validate_parameters(self::update_module_parameters(), $params);
+
+        // First find out if the module name exists at all.
+        if (!core_component::is_valid_plugin_name('mod', $params['sourcemodulename'])) {
+            throw new moodle_exception('invalidcoursemodulename', 'local_modulewizard', null, null,
+                    "Invalid source module name " . $params['sourcemodulename']);
+        }
+
+        if (!$params['sourcecmid'] && $params['sourcemoduleidnumber']) {
+            $params['sourcecmid'] = $DB->get_field('course_modules', array('idnumber' => $params['sourcemoduleidnumber']));
+        } else if (!$params['sourcecmid'] && !$params['sourcemoduleidnumber']) {
+            throw new moodle_exception('undefinedsourcemodule ' . $params['sourcecmid'], 'local_modulewizard', null, null,
+                "Undefined source module");
+        }
+
+        // Now do some security checks.
+        if (!$cm = get_coursemodule_from_id($params['sourcemodulename'], $params['sourcecmid'])) {
+            throw new moodle_exception('invalidcoursemodule ' . $params['sourcecmid'], 'local_modulewizard', null, null,
+                    "Invalid source module" . $params['sourcecmid'] . ' ' . $params['sourcemodulename']);
+        }
+
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        // We try to copy the module to the target.
+        if (local_modulewizard\modulewizard::update_module(
+                $cm,
+                $params['paramsarray'])) {
+            $success = 1;
+        } else {
+            $success = 0;
+        }
+
+        return ['status' => $success];
+    }
+
+    /**
+     * Defines the parameters for copy_module.
+     * @return external_function_parameters
+     */
+    public static function update_module_parameters() {
+        return new external_function_parameters(array(
+                'sourcemodulename' => new external_value(PARAM_RAW,
+                    'The module type of the module to update (eg. quiz or mooduell)'),
+                'sourcecmid' => new external_value(PARAM_INT,
+                    'The cmid of the module to copy.', VALUE_DEFAULT, null),
+                'sourcemoduleidnumber' => new external_value(PARAM_RAW,
+                    'The idnumber of dthe module to update',
+                    VALUE_DEFAULT, null),
+                'paramsarray' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'keyname' => new external_value(PARAM_RAW, 'Keyname', VALUE_OPTIONAL),
+                            'value' => new external_value(PARAM_RAW, 'Value', VALUE_OPTIONAL)
+                        )
+                    )
+                )
+            )
+        );
+    }
+
+    /**
+     * Defines the return values for copy_module.
+     * @return external_single_structure
+     */
+    public static function update_module_returns() {
+        return new external_single_structure(array(
+                        'status' => new external_value(PARAM_INT, 'status')
+                )
+        );
+    }
+
+    /**
      * @param string $targetmodulename
      * @param null|string $targetcourseidnumber
      * @param null|string $targetcourseshortname

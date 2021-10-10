@@ -130,6 +130,27 @@ class modulewizard {
     }
 
     /**
+     * Generic function to update module.
+     *
+     * @param object $sourcecm
+     * @param [type] $paramsarray
+     * @return void
+     */
+    public static function update_module(
+        object $sourcecm,
+        $paramsarray
+        ) {
+
+        global $DB, $CFG, $USER;
+
+        list($sourcecm, $context, $sourcemodule, $data, $cw) = can_update_moduleinfo($sourcecm);
+
+        $sourcemodule = self::prepare_modinfo($sourcecm, $data);
+
+        return true;
+    }
+
+    /**
      * Function to delete module or modules identified by different parameters.
      * @param $targetmodulename
      * @param null $targetidnumber

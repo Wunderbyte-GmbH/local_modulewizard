@@ -31,7 +31,7 @@ $services = array(
                 'functions' => array (
                         'local_modulewizard_copy_module'
                 ),
-                'restrictedusers' => 0,
+                'restrictedusers' => 1,
                 'shortname' => 'local_modulewizard_external',
                 'enabled' => 1
         )
@@ -43,6 +43,18 @@ $functions = array(
                 'methodname' => 'copy_module',
                 'classpath' => 'local/modulewizard/classes/external.php',
                 'description' => 'Copies a module to a new place',
+                'type' => 'write',
+                'ajax' => true,
+                'capabilities' => 'local/modulewizard:copymodule',
+                'services' => array(
+                        'local_modulewizard_external'
+                )
+        ),
+        'local_modulewizard_update_module' => array(
+                'classname' => 'local_modulewizard_external',
+                'methodname' => 'update_module',
+                'classpath' => 'local/modulewizard/classes/external.php',
+                'description' => 'Update a module with new information',
                 'type' => 'write',
                 'ajax' => true,
                 'capabilities' => 'local/modulewizard:copymodule',
