@@ -26,12 +26,14 @@ namespace local_modulewizard;
 
 use core\event\course_section_updated;
 
+
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-
+require_once($CFG->libdir.'/gradelib.php');
 require_once("$CFG->dirroot/course/lib.php");
 require_once("$CFG->dirroot/course/modlib.php");
+require_once("$CFG->dirroot/mod/mooduell/mod_form.php");    
 
 /**
  * Class modulewizard
@@ -39,6 +41,7 @@ require_once("$CFG->dirroot/course/modlib.php");
  * @package local_modulewizard
  */
 class modulewizard {
+
 
     /**
      * Not sure we need a constructor.
@@ -138,15 +141,42 @@ class modulewizard {
      */
     public static function update_module(
         object $sourcecm,
-        $paramsarray
+        array $paramsarray
         ) {
 
         global $DB, $CFG, $USER;
 
         list($sourcecm, $context, $sourcemodule, $data, $cw) = can_update_moduleinfo($sourcecm);
-
+       
         $sourcemodule = self::prepare_modinfo($sourcecm, $data);
+        $course = get_course($sourcemodule->course); 
 
+        list($cm, $context, $module, $data, $cw) = get_moduleinfo_data($sourcemodule, $course);
+
+        //$data->introeditor["text"] = "<p>hallotest2</p>";
+        $data = $sourcemodule;
+
+        foreach (array_keys($paramsarray) as $key) {
+            if(isset($data->$key)) {
+                $data->$key = $paramsarray[$key];
+            }
+        }
+       
+ 
+        $form = new mod_mooduell_mod_form($sourcemodule->id,$sourcemodule->instance,'2',$course);
+
+        $form->get_data();
+
+
+        //$data->name = "teqwest123123";
+        $data->id   =  $data->instance;
+        if($DB->update_record($data->modname, $data))
+         {  $sourcecm->coursemodule = $sourcecm->id;
+            edit_module_post_actions($sourcecm, $course);
+         }
+       
+        //list($sourcecm, $sourcemodule) = update_moduleinfo($sourcecm, $data, $course, null);
+        
         return true;
     }
 

@@ -1,0 +1,127 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template mod_mooduell/tablestatisticsteacher
+    Template which defines a mooduell view page.
+    Classes required for JS:
+    * none
+    Data attributes required for JS:
+    * none
+    Context variables required for this template:
+    * statistics - array: Array of statistics values
+
+    Example context (json):
+    {
+        "statistics": {
+                  "courseid": "50",
+                  "number_of_active_users": "3",
+                  "number_of_games_started": "2",
+                  "number_of_games_finished": "0",
+                  "number_of_answers": "4",
+                  "percentage_of_correct_answers": false,
+                  "eq_id": false,
+                  "eq_name": "",
+                  "eq_correct_count": 0,
+                  "hq_id": "5",
+                  "hq_name": "Wählen Sie alle FALSCHEN ANTWORTEN aus",
+                  "hq_incorrect_count": "1"
+        }
+    }
+}}
+
+{{#statistics}}
+    <!-- Card Deck -->
+    <div class="card-deck">
+        <div class="card">
+            <div class="card-body wbblue text-white">
+                <h1 class="card-title"> {{number_of_active_users}} </h1>
+                <p class="card-text subheader">{{#str}} stat_active_users, mod_mooduell {{/str}}</p>
+                <p class="card-text">{{#str}} stat_active_users_desc, mod_mooduell {{/str}}</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body wborange text-white">
+                <h1 class="card-title" > {{number_of_games_started}} </h1>
+                <p class="card-text subheader">{{#str}} stat_games_started, mod_mooduell {{/str}}</p>
+                <p class="card-text">{{#str}} stat_games_started_desc, mod_mooduell {{/str}}</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body bg-primary text-white">
+                <h1 class="card-title" > {{number_of_games_finished}} </h1>
+                <p class="card-text subheader">{{#str}} stat_games_finished, mod_mooduell {{/str}}</p>
+                <p class="card-text">{{#str}} stat_games_finished_desc, mod_mooduell {{/str}}</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body bg-warning text-black">
+                <h1 class="card-title" > {{number_of_answers}} </h1>
+                <p class="card-text subheader">{{#str}} stat_questions_answered, mod_mooduell {{/str}}</p>
+                <p class="card-text">{{#str}} stat_questions_answered_desc, mod_mooduell {{/str}}</p>
+            </div>
+        </div>
+    </div>
+    <div class="card-deck three-columns">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h1 class="card-title">
+                    {{#percentage_of_correct_answers}}{{.}}%{{/percentage_of_correct_answers}}
+                    {{^percentage_of_correct_answers}}0%{{/percentage_of_correct_answers}}
+                </h1>
+                <p class="card-text subheader">{{#str}} stat_answered_correctly, mod_mooduell {{/str}}</p>
+                <p class="card-text">{{#str}} stat_answered_correctly_desc, mod_mooduell {{/str}}</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body bg-info text-white">
+                <h1 class="card-title smallheader" >{{#str}} stat_easiest_question, mod_mooduell {{/str}}</h1>
+                {{#eq_id}}
+                    <p class="card-text subheader text-white" >{{eq_name}}</p>
+                    <p class="card-text">
+                        {{#str}} stat_easiest_question_desc1, mod_mooduell {{/str}}{{eq_correct_count}}{{#str}} stat_easiest_question_desc2, mod_mooduell {{/str}}
+                    </p>
+                    <a href="../../question/question.php?returnurl=/question/edit.php?courseid={{courseid}}&courseid={{courseid}}&id={{eq_id}}"
+                    target="_blank" class="btn btn-primary bg-light text-info" style="border-style: none;">
+                    {{#str}} stat_edit_question, mod_mooduell {{/str}}
+                    </a>
+                {{/eq_id}}
+                {{^eq_id}}
+                    {{#str}} stat_question_undefined, mod_mooduell {{/str}}
+                {{/eq_id}}
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body bg-danger text-white">
+                <h1 class="card-title smallheader">{{#str}} stat_hardest_question, mod_mooduell {{/str}}</h1>
+                {{#hq_id}}
+                    <p class="card-text subheader text-white" >{{hq_name}}</p>
+                    <p class="card-text">
+                        {{#str}} stat_hardest_question_desc1, mod_mooduell {{/str}}{{hq_incorrect_count}}{{#str}} stat_hardest_question_desc2, mod_mooduell {{/str}}
+                    </p>
+                    <a href="../../question/question.php?returnurl=/question/edit.php?courseid={{courseid}}&courseid={{courseid}}&id={{hq_id}}"
+                        target="_blank" class="btn btn-primary bg-light text-danger" style="border-style: none;">
+                    {{#str}} stat_edit_question, mod_mooduell {{/str}}
+                    </a>
+                {{/hq_id}}
+                {{^hq_id}}
+                    {{#str}} stat_question_undefined, mod_mooduell {{/str}}
+                {{/hq_id}}
+            </div>
+        </div>
+    </div>
+{{/statistics}}
+
+{{^statistics}}
+    {{#str}} nostatistics, mod_mooduell {{/str}}
+{{/statistics}}
