@@ -216,9 +216,52 @@ class modulewizard {
 
         global $DB, $CFG, $USER;
 
-        list($sourcecm, $context, $sourcemodule, $data, $cw) = can_update_moduleinfo($sourcecm);
+        // Check the course exists.
+        $course = $DB->get_record('course', array('id'=>$sourcecm->course), '*', MUST_EXIST);
 
-        $sourcemodule = self::prepare_modinfo($sourcecm, $data);
+        list($cm, $context, $module, $data, $cw) = get_moduleinfo_data($sourcecm, $course);
+
+
+        // Here we override all the keys in data.
+
+        foreach ($paramsarray as $param) {
+
+            $key = $param['keyname'];
+
+            // First we need to check if it's an editor field:
+            if (isset($data->{$key . 'editor'})
+                && isset($data->{$key . 'editor'}['text'])) {
+
+                $data->{$key . 'editor'}['text'] = $param['value'];
+
+            } else if (isset($data->{$key})) {
+                $data->{$key} = $param['value'];
+            } else {
+                throw new moodle_exception('keydoesnotexist', 'local_modulewizard', null, null, "key $key does not exist.");
+            }
+        }
+
+        $data->update = $sourcecm->id;
+
+        $modmoodleform = "$CFG->dirroot/mod/$module->name/mod_form.php";
+        if (file_exists($modmoodleform)) {
+            require_once($modmoodleform);
+        } else {
+            throw new \moodle_exception('noformdesc');
+        }
+
+        $mformclassname = 'mod_'.$module->name.'_mod_form';
+
+        $data->availabilityconditionsjson = json_encode(\core_availability\tree::get_root_json(array()));
+
+        $mformclassname::mock_submit((array)$data);
+
+        $mform = new $mformclassname($data, $cw->section, $cm, $course);
+        $mform->set_data($data);
+
+        $fromform = $mform->get_data();
+
+        list($cm, $fromform) = update_moduleinfo($cm, $fromform, $course, $mform);
 
         return true;
     }
