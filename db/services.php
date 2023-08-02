@@ -50,6 +50,18 @@ $functions = array(
                         'local_modulewizard_external'
                 )
         ),
+        'local_modulewizard_sync_module' => array(
+                'classname' => 'local_modulewizard_external',
+                'methodname' => 'sync_module',
+                'classpath' => 'local/modulewizard/classes/external.php',
+                'description' => 'Syncs a module with target',
+                'type' => 'write',
+                'ajax' => true,
+                'capabilities' => 'local/modulewizard:copymodule',
+                'services' => array(
+                        'local_modulewizard_external'
+                )
+        ),
         'local_modulewizard_update_module' => array(
                 'classname' => 'local_modulewizard_external',
                 'methodname' => 'update_module',

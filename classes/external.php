@@ -147,6 +147,87 @@ class local_modulewizard_external extends external_api {
     }
 
     /**
+     * Function to actually copy a module to a new course and course section.
+     * @param int $sourcecmid
+     * @param string $sourcemodulename
+     * @param int $targetcmid
+     * @return int[]
+     * @throws coding_exception
+     * @throws invalid_parameter_exception
+     * @throws moodle_exception
+     * @throws restricted_context_exception
+     */
+    public static function sync_module(
+        int $sourcecmid,
+        string $sourcemodulename,
+        $targetcmid = null,
+        ) {
+
+    global $DB;
+
+    $params = array(
+            'sourcecmid' => $sourcecmid,
+            'sourcemodulename' => $sourcemodulename,
+            'targetcmid' => $targetcmid,
+    );
+
+    $params = self::validate_parameters(self::sync_module_parameters(), $params);
+
+    // First find out if the module name exists at all.
+    if (!core_component::is_valid_plugin_name('mod', $params['sourcemodulename'])) {
+        throw new moodle_exception('invalidcoursemodulename', 'local_modulewizard', null, null,
+                "Invalid source module name " . $params['sourcemodulename']);
+    }
+
+    // Now do some security checks.
+    if (!$cm = get_coursemodule_from_id($params['sourcemodulename'], $params['sourcecmid'])) {
+        throw new moodle_exception('invalidcoursemodule ' . $params['sourcecmid'], 'local_modulewizard', null, null,
+                "Invalid source module" . $params['sourcecmid'] . ' ' . $params['sourcemodulename']);
+    }
+
+    $context = context_module::instance($cm->id);
+    self::validate_context($context);
+
+    // We try to copy the module to the target.
+    if (local_modulewizard\modulewizard::sync_module(
+            $cm,
+            $params['targetcmid'],
+            )) {
+        $success = 1;
+    } else {
+        $success = 0;
+    }
+
+    return ['status' => $success];
+}
+
+/**
+ * Defines the parameters for copy_module.
+ * @return external_function_parameters
+ */
+public static function sync_module_parameters() {
+    return new external_function_parameters(array(
+            'sourcecmid' => new external_value(PARAM_INT,
+                'The cmid of the module to copy.'),
+            'sourcemodulename' => new external_value(PARAM_RAW,
+                'The module type of the module to copy (eg. quiz or mooduell)'),
+            'targetcmid' => new external_value(PARAM_INT,
+                'The module to sync'),
+    ));
+}
+
+/**
+ * Defines the return values for sync_module.
+ * @return external_single_structure
+ */
+public static function sync_module_returns() {
+    return new external_single_structure(array(
+                    'status' => new external_value(PARAM_INT, 'status')
+            )
+    );
+}
+
+    /**
      * Generic function to update module.
      *
      * @param integer $sourcecmid

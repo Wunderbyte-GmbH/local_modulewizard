@@ -25,6 +25,8 @@
 namespace local_modulewizard;
 
 use core\event\course_section_updated;
+use moodle_exception;
+use stdClass;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -32,6 +34,14 @@ global $CFG;
 
 require_once("$CFG->dirroot/course/lib.php");
 require_once("$CFG->dirroot/course/modlib.php");
+
+require_once("$CFG->dirroot/lib/gradelib.php");
+// require_once("$CFG->dirroot/lib/grade/grade_item.php");
+// require_once("$CFG->dirroot/lib/grade/grade_object.php");
+// require_once("$CFG->dirroot/grade/report/overview/tests/externallib_test.php");
+require_once("$CFG->dirroot/lib/grade/constants.php");
+// require_once("$CFG->dirroot/lib/phpunit/classes/advanced_testcase.php");
+// require_once("$CFG->dirroot/mod/lib.php");
 
 /**
  * Class modulewizard
@@ -126,6 +136,69 @@ class modulewizard {
                 moveto_module($mod, $sectionrecord, $beforemodid);
             }
         }
+        return true;
+    }
+
+    /**
+     * Function to handle copy operations.
+     * @param object $sourcecm
+     * @param int $targetcmid
+     * @return bool
+     * @throws \coding_exception
+     * @throws \dml_exception
+     * @throws \moodle_exception
+     */
+    public static function sync_module(
+        object $sourcecm,
+        $targetcmid,
+        ) {
+
+        global $DB, $CFG, $COURSE;
+
+        // Get the source course.
+        $course = $DB->get_record('course', array('id'=>$sourcecm->course), '*', MUST_EXIST);
+
+        list($sourcecm, $context, $module, $sourcedata, $cw) = get_moduleinfo_data($sourcecm, $course);
+
+        list ($targetcourse, $targetcm) = get_course_and_cm_from_cmid($targetcmid);
+
+        // We need the cm as stdclass.
+        $targetcm = get_coursemodule_from_id($sourcecm->modname, $targetcmid);
+
+        // We need to swith COURSE to targetcourse.
+
+        $COURSE = $targetcourse;
+
+        $data = clone($sourcedata);
+
+        $data->id = "$targetcm->instance";
+        $data->instance = "$targetcm->instance";
+        $data->update = "$targetcmid";
+        $data->course = "$targetcm->course";
+        $data->coursemodule = "$targetcmid";
+
+        //unset($data->visible);
+
+        $modmoodleform = "$CFG->dirroot/mod/$module->name/mod_form.php";
+        if (file_exists($modmoodleform)) {
+            require_once($modmoodleform);
+        } else {
+            throw new \moodle_exception('noformdesc');
+        }
+
+        $mformclassname = 'mod_'.$module->name.'_mod_form';
+
+        $data->availabilityconditionsjson = json_encode(\core_availability\tree::get_root_json(array()));
+
+        $mformclassname::mock_submit((array)$data);
+
+        $mform = new $mformclassname($data, $targetcm->section, $targetcm, $targetcourse);
+        $mform->set_data($data);
+
+        $fromform = $mform->get_data();
+
+        list($cm, $fromform) = update_moduleinfo($targetcm, $fromform, $targetcourse, $mform);
+
         return true;
     }
 
