@@ -309,7 +309,7 @@ class modulewizard {
         global $DB;
 
         $sql = "SELECT cs.*
-                FROM mdl_course_sections cs";
+                FROM {course_sections} cs";
 
         $where = "
                 WHERE cs.course =:courseid1";
@@ -319,7 +319,7 @@ class modulewizard {
         if (empty($targetsectionname) || $targetsectionname === "last") {
             $where .= "
                 AND cs.section = (SELECT MAX(section)
-                FROM mdl_course_sections
+                FROM {course_sections}
                 WHERE course=:courseid2)";
             $params['courseid2'] = $courseid;
         } else if ($targetsectionname === 'top') {
