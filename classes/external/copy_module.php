@@ -51,38 +51,59 @@ require_once($CFG->libdir . '/externallib.php');
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class copy_module extends external_api {
-
     /**
      * Describes the parameters for add_item_to_cart.
      *
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters(array(
-            'sourcecmid' => new external_value(PARAM_INT,
-                'The cmid of the module to copy.'),
-            'sourcemodulename' => new external_value(PARAM_RAW,
-                'The module type of the module to copy (eg. quiz or mooduell)'),
-            'targetcourseidnumber' => new external_value(PARAM_RAW,
+        return new external_function_parameters([
+            'sourcecmid' => new external_value(
+                PARAM_INT,
+                'The cmid of the module to copy.'
+            ),
+            'sourcemodulename' => new external_value(
+                PARAM_RAW,
+                'The module type of the module to copy (eg. quiz or mooduell)'
+            ),
+            'targetcourseidnumber' => new external_value(
+                PARAM_RAW,
                 'The course to copy to, identified by the value in the idnumber column in the course table.',
-                VALUE_DEFAULT, null),
-            'targetcourseshortname' => new external_value(PARAM_RAW,
+                VALUE_DEFAULT,
+                null
+            ),
+            'targetcourseshortname' => new external_value(
+                PARAM_RAW,
                 'The course to copy to, identified by the value in the shortname column in the course table.',
-                VALUE_DEFAULT, null),
-            'targetsectionname' => new external_value(PARAM_RAW,
+                VALUE_DEFAULT,
+                null
+            ),
+            'targetsectionname' => new external_value(
+                PARAM_RAW,
                 'The section name, identified by the name column in the course_sections table.
                     "top" is for section 0, null for last.',
-                VALUE_DEFAULT, null),
-            'targetslot' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'targetslot' => new external_value(
+                PARAM_INT,
                 'The slot for the new activity, where 0 is the top place in the activity. -1 is last.',
-                VALUE_DEFAULT, null),
-            'idnumber' => new external_value(PARAM_RAW,
+                VALUE_DEFAULT,
+                null
+            ),
+            'idnumber' => new external_value(
+                PARAM_RAW,
                 'To set the idnumber of the new activity.',
-                VALUE_DEFAULT, null),
-            'shortname' => new external_value(PARAM_RAW,
+                VALUE_DEFAULT,
+                null
+            ),
+            'shortname' => new external_value(
+                PARAM_RAW,
                 'To set the shortname of the new activity.',
-                VALUE_DEFAULT, null),
-        ));
+                VALUE_DEFAULT,
+                null
+            ),
+        ]);
     }
 
     /**
@@ -109,47 +130,60 @@ class copy_module extends external_api {
         $targetsectionname = null,
         $targetslot = null,
         $idnumber = null,
-        $shortname = null) {
-
+        $shortname = null
+    ) {
         global $DB;
 
         $params = [
-                'sourcecmid' => $sourcecmid,
-                'sourcemodulename' => $sourcemodulename,
-                'targetcourseidnumber' => $targetcourseidnumber,
-                'targetcourseshortname' => $targetcourseshortname,
-                'targetsectionname' => $targetsectionname,
-                'targetslot' => $targetslot,
-                'idnumber' => $idnumber,
-                'shortname' => $shortname,
+            'sourcecmid' => $sourcecmid,
+            'sourcemodulename' => $sourcemodulename,
+            'targetcourseidnumber' => $targetcourseidnumber,
+            'targetcourseshortname' => $targetcourseshortname,
+            'targetsectionname' => $targetsectionname,
+            'targetslot' => $targetslot,
+            'idnumber' => $idnumber,
+            'shortname' => $shortname,
         ];
 
         $params = self::validate_parameters(self::execute_parameters(), $params);
 
         // First find out if the module name exists at all.
         if (!core_component::is_valid_plugin_name('mod', $params['sourcemodulename'])) {
-            throw new moodle_exception('invalidcoursemodulename', 'local_modulewizard', null, null,
-                    "Invalid source module name " . $params['sourcemodulename']);
+            throw new moodle_exception(
+                'invalidcoursemodulename',
+                'local_modulewizard',
+                null,
+                null,
+                "Invalid source module name " . $params['sourcemodulename']
+            );
         }
 
         // Now do some security checks.
         if (!$cm = get_coursemodule_from_id($params['sourcemodulename'], $params['sourcecmid'])) {
-            throw new moodle_exception('invalidcoursemodule ' . $params['sourcecmid'], 'local_modulewizard', null, null,
-                    "Invalid source module" . $params['sourcecmid'] . ' ' . $params['sourcemodulename']);
+            throw new moodle_exception(
+                'invalidcoursemodule ' . $params['sourcecmid'],
+                'local_modulewizard',
+                null,
+                null,
+                "Invalid source module" . $params['sourcecmid'] . ' ' . $params['sourcemodulename']
+            );
         }
 
         $context = context_module::instance($cm->id);
         self::validate_context($context);
 
         // We try to copy the module to the target.
-        if (modulewizard::copy_module(
+        if (
+            modulewizard::copy_module(
                 $cm,
                 $params['targetcourseidnumber'],
                 $params['targetcourseshortname'],
                 $params['targetsectionname'],
                 $params['targetslot'],
                 $params['idnumber'],
-                $params['shortname'])) {
+                $params['shortname']
+            )
+        ) {
             $success = 1;
         } else {
             $success = 0;
@@ -164,8 +198,9 @@ class copy_module extends external_api {
      * @return external_single_structure
      */
     public static function execute_returns(): external_single_structure {
-        return new external_single_structure([
-            'status' => new external_value(PARAM_INT, 'status'),
+        return new external_single_structure(
+            [
+                'status' => new external_value(PARAM_INT, 'status'),
             ]
         );
     }

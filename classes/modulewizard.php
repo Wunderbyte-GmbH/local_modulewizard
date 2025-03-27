@@ -49,12 +49,99 @@ require_once("$CFG->dirroot/lib/grade/constants.php");
  * @package local_modulewizard
  */
 class modulewizard {
-
     /**
      * Not sure we need a constructor.
      */
     public function __construct() {
+    }
 
+    /**
+     * Function to handle copy operations.
+     * @param object $sourcecm
+     * @param string $targetcourseidnumber
+     * @param string $targetcourseshortname
+     * @param null|string $targetsectionname
+     * @param null|int $targetslot
+     * @param null|string $idnumber
+     * @param null|string $shortname
+     * @return bool
+     * @throws \coding_exception
+     * @throws \dml_exception
+     * @throws \moodle_exception
+     */
+    public static function copy_module(
+        object $sourcecm,
+        $targetcourseidnumber = null,
+        $targetcourseshortname = null,
+        $targetsectionname = null,
+        $targetslot = null,
+        $idnumber = null,
+        $shortname = null
+    ) {
+
+        global $DB, $CFG, $USER;
+
+        // This we need to run generator below.
+        require_once($CFG->dirroot . '/lib/phpunit/classes/util.php');
+
+        $courseid = self::return_courseid($targetcourseidnumber, $targetcourseshortname);
+
+        list($sourcecm, $context, $sourcemodule, $data, $cw) = can_update_moduleinfo($sourcecm);
+
+        $sourcecm->course = $courseid;
+        $sourcemodule = self::prepare_modinfo($sourcecm, $data);
+
+        if ($idnumber) {
+            // When we want to set idnumber, it has to be unique.
+            if (
+                !$DB->record_exists('course_modules', array(
+                    'idnumber' => $idnumber,
+                    'module' => $sourcecm->module
+                ))
+            ) {
+                $sourcemodule->idnumber = $idnumber;
+            } else {
+                throw new \moodle_exception(
+                    'idnumberexistsalready',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    "The idnumber $idnumber you want to give this new module exists already."
+                );
+            }
+        }
+
+        if ($shortname) {
+            $sourcemodule->shortname = $shortname;
+        }
+
+        $section = self::return_section($targetsectionname, $courseid);
+        $sourcemodule->section = $section->section;
+
+        $generator = \testing_util::get_data_generator();
+        if (!$record = $generator->create_module($sourcecm->modname, $sourcemodule)) {
+            throw new \moodle_exception(
+                'creationfailed',
+                'local_modulewizard',
+                null,
+                null,
+                'Something went wrong during the creation of the module.'
+            );
+        }
+
+        // If we have a slot, we move the module.
+        if ($targetslot !== null) {
+            $mod = get_coursemodule_from_id($sourcecm->modname, $record->cmid);
+            $sectionrecord = $DB->get_record('course_sections', array('section' => $sourcemodule->section, 'course' => $courseid));
+            $cmsinsection = explode(',', $sectionrecord->sequence);
+
+            // Here we run a verification. There can be some cases, where the slot is not correct.
+            // Therefore, we run a function which checks every cm if It's not yet deleted or otherwise unavailable.
+            if (list($beforemodid) = self::return_cm_in_section_slot($cmsinsection, $targetslot)) {
+                moveto_module($mod, $sectionrecord, $beforemodid);
+            }
+        }
+        return true;
     }
 
     /**
@@ -69,16 +156,16 @@ class modulewizard {
     public static function sync_module(
         object $sourcecm,
         $targetcmid,
-        ) {
+    ) {
 
         global $DB, $CFG, $COURSE;
 
         // Get the source course.
-        $course = $DB->get_record('course', array('id'=>$sourcecm->course), '*', MUST_EXIST);
+        $course = $DB->get_record('course', array('id' => $sourcecm->course), '*', MUST_EXIST);
 
         list($sourcecm, $context, $module, $sourcedata, $cw) = get_moduleinfo_data($sourcecm, $course);
 
-        list ($targetcourse, $targetcm) = get_course_and_cm_from_cmid($targetcmid);
+        list($targetcourse, $targetcm) = get_course_and_cm_from_cmid($targetcmid);
 
         // We need the cm as stdclass.
         $targetcm = get_coursemodule_from_id($sourcecm->modname, $targetcmid);
@@ -87,7 +174,7 @@ class modulewizard {
 
         $COURSE = $targetcourse;
 
-        $data = clone($sourcedata);
+        $data = clone ($sourcedata);
 
         $data->id = "$targetcm->instance";
         $data->instance = "$targetcm->instance";
@@ -104,11 +191,11 @@ class modulewizard {
             throw new \moodle_exception('noformdesc');
         }
 
-        $mformclassname = 'mod_'.$module->name.'_mod_form';
+        $mformclassname = 'mod_' . $module->name . '_mod_form';
 
         $data->availabilityconditionsjson = json_encode(\core_availability\tree::get_root_json(array()));
 
-        $mformclassname::mock_submit((array)$data);
+        $mformclassname::mock_submit((array) $data);
 
         $mform = new $mformclassname($data, $targetcm->section, $targetcm, $targetcourse);
         $mform->set_data($data);
@@ -130,12 +217,12 @@ class modulewizard {
     public static function update_module(
         object $sourcecm,
         $paramsarray
-        ) {
+    ) {
 
         global $DB, $CFG, $USER;
 
         // Check the course exists.
-        $course = $DB->get_record('course', array('id'=>$sourcecm->course), '*', MUST_EXIST);
+        $course = $DB->get_record('course', array('id' => $sourcecm->course), '*', MUST_EXIST);
 
         list($cm, $context, $module, $data, $cw) = get_moduleinfo_data($sourcecm, $course);
 
@@ -147,8 +234,10 @@ class modulewizard {
             $key = $param['keyname'];
 
             // First we need to check if it's an editor field:
-            if (isset($data->{$key . 'editor'})
-                && isset($data->{$key . 'editor'}['text'])) {
+            if (
+                isset($data->{$key . 'editor'})
+                && isset($data->{$key . 'editor'}['text'])
+            ) {
 
                 $data->{$key . 'editor'}['text'] = $param['value'];
 
@@ -168,11 +257,11 @@ class modulewizard {
             throw new \moodle_exception('noformdesc');
         }
 
-        $mformclassname = 'mod_'.$module->name.'_mod_form';
+        $mformclassname = 'mod_' . $module->name . '_mod_form';
 
         $data->availabilityconditionsjson = json_encode(\core_availability\tree::get_root_json(array()));
 
-        $mformclassname::mock_submit((array)$data);
+        $mformclassname::mock_submit((array) $data);
 
         $mform = new $mformclassname($data, $cw->section, $cm, $course);
         $mform->set_data($data);
@@ -198,35 +287,38 @@ class modulewizard {
      * @throws \moodle_exception
      */
     public static function delete_module(
-            $targetmodulename,
-            $targetidnumber = null,
-            $targetcourseidnumber = null,
-            $targetcourseshortname = null,
-            $targetsectionname = null,
-            $targetslot = null,
-            $deleteall = false
-            ) {
-
+        $targetmodulename,
+        $targetidnumber = null,
+        $targetcourseidnumber = null,
+        $targetcourseshortname = null,
+        $targetsectionname = null,
+        $targetslot = null,
+        $deleteall = false
+    ) {
         global $DB;
 
         if ($targetidnumber) {
-            $sql = "SELECT *
+            $sql = "SELECT cm.id
                 FROM {course_modules} cm
                 INNER JOIN {modules} m
                 ON m.name=:modulename
                 WHERE cm.idnumber=:idnumber";
-            $params = array('modulename' => $targetmodulename,
-                    'idnumber' => $targetidnumber);
+            $params = array(
+                'modulename' => $targetmodulename,
+                'idnumber' => $targetidnumber
+            );
 
-            if ($cmtodelete = $DB->get_records_sql($sql, $params)) {
+            if ($cmtodelete = $DB->get_record_sql($sql, $params)) {
                 course_delete_module($cmtodelete->id);
                 return true;
             } else {
-                throw new \moodle_exception('targetidnumbernotfound',
-                        'local_modulewizard',
-                        null,
-                        null,
-                        'No module with the given idnumber was found.');
+                throw new \moodle_exception(
+                    'targetidnumbernotfound',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'No module with the given idnumber was found.'
+                );
             }
         }
 
@@ -248,19 +340,23 @@ class modulewizard {
                 }
                 return true;
             } else {
-                throw new \moodle_exception('tomanymodulesfound',
-                        'local_modulewizard',
-                        null,
-                        null,
-                        'More than one module would be deleted with this setting.
-                            If you want to proceed, set deleteall param to 1');
-            }
-        } else {
-            throw new \moodle_exception('nomodulefound',
+                throw new \moodle_exception(
+                    'tomanymodulesfound',
                     'local_modulewizard',
                     null,
                     null,
-                    'No module was found with your setting. please check again');
+                    'More than one module would be deleted with this setting.
+                            If you want to proceed, set deleteall param to 1'
+                );
+            }
+        } else {
+            throw new \moodle_exception(
+                'nomodulefound',
+                'local_modulewizard',
+                null,
+                null,
+                'No module was found with your setting. please check again'
+            );
         }
     }
 
@@ -276,7 +372,7 @@ class modulewizard {
         int $sourcecourseid,
         string $newcourseshortname,
         $newcoursename = null
-        ) {
+    ) {
 
         global $DB, $CFG, $USER;
 
@@ -284,11 +380,13 @@ class modulewizard {
         require_once($CFG->dirroot . '/lib/phpunit/classes/util.php');
 
         if (!$sourcecourse = get_course($sourcecourseid)) {
-            throw new \moodle_exception('coursenotfound',
-                    'local_modulewizard',
-                    null,
-                    null,
-                    'Couldn\'t find the source course');
+            throw new \moodle_exception(
+                'coursenotfound',
+                'local_modulewizard',
+                null,
+                null,
+                'Couldn\'t find the source course'
+            );
         }
 
         $sourcecourse->shortname = $newcourseshortname;
@@ -297,11 +395,13 @@ class modulewizard {
         $generator = \testing_util::get_data_generator();
 
         if (!$record = $generator->create_course($sourcecourse)) {
-            throw new \moodle_exception('creationfailed',
-                    'local_modulewizard',
-                    null,
-                    null,
-                    'Something went wrong during the creation of the module.');
+            throw new \moodle_exception(
+                'creationfailed',
+                'local_modulewizard',
+                null,
+                null,
+                'Something went wrong during the creation of the module.'
+            );
         }
 
         return true;
@@ -313,7 +413,7 @@ class modulewizard {
      * @param \stdClass $sourcemodule
      * @return \stdClass
      */
-    private static function prepare_modinfo(\stdClass $sourcecm, \stdClass $sourcemodule) :\stdClass {
+    private static function prepare_modinfo(\stdClass $sourcecm, \stdClass $sourcemodule): \stdClass {
         global $DB;
 
         $sourcecm->modulename = $sourcecm->modname;
@@ -370,11 +470,13 @@ class modulewizard {
         if ($result = $DB->get_record_sql($sql, $params)) {
             return $result;
         } else {
-            throw new \moodle_exception('sectionnotfound',
-                    'local_modulewizard',
-                    null,
-                    null,
-                    'The specified section '. $targetsectionname .' was not found');
+            throw new \moodle_exception(
+                'sectionnotfound',
+                'local_modulewizard',
+                null,
+                null,
+                'The specified section ' . $targetsectionname . ' was not found'
+            );
         }
     }
 
@@ -386,31 +488,35 @@ class modulewizard {
      * @throws \dml_exception
      * @throws \moodle_exception
      */
-    private static function return_courseid(string $targetcourseidnumber = null,
-            string $targetcourseshortname = null) {
+    private static function return_courseid(
+        string $targetcourseidnumber = null,
+        string $targetcourseshortname = null
+    ) {
 
         global $DB;
 
         // Courses can either be identified by targetcourseidnumber or by targetcourseshortname - not both.
         // So throw an error if both are provided.
         if ($targetcourseidnumber && $targetcourseshortname) {
-            throw new \moodle_exception('toomanyparams',
-                    'local_modulewizard',
-                    null,
-                    null,
-                    'Target courses can be identified either by targetcourseidnumber or by targetcourseshortname. ' .
-                    'You cannot provide both.'
+            throw new \moodle_exception(
+                'toomanyparams',
+                'local_modulewizard',
+                null,
+                null,
+                'Target courses can be identified either by targetcourseidnumber or by targetcourseshortname. ' .
+                'You cannot provide both.'
             );
         }
 
         // Also throw an error, if both are missing.
         if (!$targetcourseidnumber && !$targetcourseshortname) {
-            throw new \moodle_exception('notenoughparams',
-                    'local_modulewizard',
-                    null,
-                    null,
-                    'Target courses need to be identified either by targetcourseidnumber or by targetcourseshortname. ' .
-                    'You need to provide one of them (not both).'
+            throw new \moodle_exception(
+                'notenoughparams',
+                'local_modulewizard',
+                null,
+                null,
+                'Target courses need to be identified either by targetcourseidnumber or by targetcourseshortname. ' .
+                'You need to provide one of them (not both).'
             );
         }
 
@@ -418,11 +524,13 @@ class modulewizard {
         if ($targetcourseidnumber) {
             // Throw error if we can't retrieve the courseid.
             if (!$courseid = $DB->get_field('course', 'id', array('idnumber' => $targetcourseidnumber))) {
-                throw new \moodle_exception('coursenotfound',
-                        'local_modulewizard',
-                        null,
-                        null,
-                        'The specified target course idnumber '. $targetcourseidnumber .' was not found');
+                throw new \moodle_exception(
+                    'coursenotfound',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'The specified target course idnumber ' . $targetcourseidnumber . ' was not found'
+                );
             }
         }
 
@@ -430,11 +538,13 @@ class modulewizard {
         if ($targetcourseshortname) {
             // Throw error if we can't retrieve the courseid.
             if (!$courseid = $DB->get_field('course', 'id', array('shortname' => $targetcourseshortname))) {
-                throw new \moodle_exception('coursenotfound',
-                        'local_modulewizard',
-                        null,
-                        null,
-                        'The specified target course shortname '. $targetcourseshortname .' was not found');
+                throw new \moodle_exception(
+                    'coursenotfound',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'The specified target course shortname ' . $targetcourseshortname . ' was not found'
+                );
             }
         }
         return $courseid;
@@ -450,11 +560,13 @@ class modulewizard {
      * @throws \dml_exception
      * @throws \moodle_exception
      */
-    private static function get_cms_from_course(int $courseid,
-            string $modname = null,
-            string $sectionname = null,
-            int $targetslot = null,
-            bool $onlyvisible = false) {
+    private static function get_cms_from_course(
+        int $courseid,
+        string $modname = null,
+        string $sectionname = null,
+        int $targetslot = null,
+        bool $onlyvisible = false
+    ) {
         global $DB;
 
         $sql = "SELECT cm.*, m.name as modname
@@ -507,11 +619,13 @@ class modulewizard {
                 }
                 return $result;
             } else {
-                throw new \moodle_exception('sectionnotfound',
-                        'local_modulewizard',
-                        null,
-                        null,
-                        'The specified section '. $sectionname .' was not found');
+                throw new \moodle_exception(
+                    'sectionnotfound',
+                    'local_modulewizard',
+                    null,
+                    null,
+                    'The specified section ' . $sectionname . ' was not found'
+                );
             }
         }
     }

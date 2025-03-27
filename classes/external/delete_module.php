@@ -26,13 +26,11 @@ declare(strict_types=1);
 
 namespace local_modulewizard\external;
 
-use context_module;
 use core_component;
 use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
-use external_multiple_structure;
 use local_modulewizard\modulewizard;
 use moodle_exception;
 use coding_exception;
@@ -130,7 +128,7 @@ class delete_module extends external_api {
         }
 
         // We try to delete the module.
-        if (local_modulewizard\modulewizard::delete_module(
+        if (modulewizard::delete_module(
                 $params['targetmodulename'],
                 $params['targetidnumber'],
                 $params['targetcourseidnumber'],

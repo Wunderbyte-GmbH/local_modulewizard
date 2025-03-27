@@ -32,6 +32,7 @@ use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
+use local_modulewizard\modulewizard;
 use moodle_exception;
 use coding_exception;
 use invalid_parameter_exception;
@@ -115,7 +116,7 @@ class sync_module extends external_api {
         self::validate_context($context);
 
         // We try to copy the module to the target.
-        if (local_modulewizard\modulewizard::sync_module(
+        if (modulewizard::sync_module(
                 $cm,
                 $params['targetcmid'],
                 )) {
