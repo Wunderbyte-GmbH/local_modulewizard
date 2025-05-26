@@ -7,7 +7,6 @@ jobs:
     uses: Wunderbyte-GmbH/catalyst-moodle-workflows/.github/workflows/ci.yml@main
     with:
       # Change these based on your plugin's requirements
-
       disable_release: true  # Use true if using the tag-based release workflow
 
       # moodle_branches: "MOODLE_401_STABLE MOODLE_402_STABLE"  # Optional: Only test specific Moodle versions
